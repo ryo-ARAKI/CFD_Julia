@@ -52,17 +52,15 @@ module Poisson2D_FFT
         c1 = (1.0/km)^2
         c2 = -8.0*pi*pi
 
-        for j = 1:par.ny+1
-            for i = 1:par.nx+1
-                ue[i,j] = sin(2.0*pi*x[i])*sin(2.0*pi*y[j]) +
-                    c1*sin(km*2.0*pi*x[i])*sin(km*2.0*pi*y[j])
+        for j = 1:par.ny+1 for i = 1:par.nx+1
+            ue[i,j] = sin(2.0*pi*x[i])*sin(2.0*pi*y[j]) +
+                c1*sin(km*2.0*pi*x[i])*sin(km*2.0*pi*y[j])
 
-                f[i,j] = c2*sin(2.0*pi*x[i])*sin(2.0*pi*y[j]) +
-                        c2*sin(km*2.0*pi*x[i])*sin(km*2.0*pi*y[j])
+            f[i,j] = c2*sin(2.0*pi*x[i])*sin(2.0*pi*y[j]) +
+                    c2*sin(km*2.0*pi*x[i])*sin(km*2.0*pi*y[j])
 
-                un[i,j] = 0.0
-            end
-        end
+            un[i,j] = 0.0
+        end end
     end
 
     """
@@ -86,11 +84,9 @@ module Analysis
     function compute_l2norm(nx, ny, r)
         rms = 0.0
         # println(residual)
-        for j = 1:ny+1
-        for i = 1:nx+1
+        for j = 1:ny+1 for i = 1:nx+1
             rms = rms + r[i,j]^2
-        end
-        end
+        end end
         rms = sqrt(rms/((nx+1)*(ny+1)))
         return rms
     end
@@ -151,6 +147,9 @@ using Printf
 end  # Output
 
 
+"""
+Solve 2D Poisson equation by FFT
+"""
 function ps_fft(nx,ny,dx,dy,f)
     eps = 1.0e-6
 
