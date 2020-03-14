@@ -173,19 +173,15 @@ function ps_spectral(nx,ny,dx,dy,f)
 
     ky = kx
 
-    for i = 1:nx
-        for j = 1:ny
-            data[i,j] = complex(f[i,j],0.0)
-        end
-    end
+    for j = 1:ny for i = 1:nx
+        data[i,j] = complex(f[i,j],0.0)
+    end end
 
     e = fft(data)
     e[1,1] = 0.0
-    for i = 1:nx
-        for j = 1:ny
-            data1[i,j] = e[i,j]/(-kx[i]^2 -ky[j]^2)
-        end
-    end
+    for j = 1:ny for i = 1:nx
+        data1[i,j] = e[i,j]/(-kx[i]^2 -ky[j]^2)
+    end end
 
     u = real(ifft(data1))
 
