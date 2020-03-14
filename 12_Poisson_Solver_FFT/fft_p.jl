@@ -1,12 +1,12 @@
-clearconsole()
+# clearconsole()
 
 using CPUTime
 using Printf
-using Plots
+# using Plots
 using FFTW
 
-font = Plots.font("Times New Roman", 18)
-pyplot(guidefont=font, xtickfont=font, ytickfont=font, legendfont=font)
+# font = Plots.font("Times New Roman", 18)
+# pyplot(guidefont=font, xtickfont=font, ytickfont=font, legendfont=font)
 
 function compute_l2norm(nx, ny, r)
     rms = 0.0
