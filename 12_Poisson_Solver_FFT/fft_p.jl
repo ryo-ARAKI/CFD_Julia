@@ -133,6 +133,13 @@ using Printf
     Output various data
     """
     function out_data(rms_error,max_error,t)
+        # STDOUT
+        println("Error details:");
+        println("L-2 Norm = ", rms_error);
+        println("Maximum Norm = ", max_error);
+        print("CPU Time = ", t);
+
+        # txt file
         output = open("output_512.txt", "w");
 
         write(output, "Error details: \n");
@@ -171,19 +178,15 @@ function ps_fft(nx,ny,dx,dy,f)
 
     ky = kx
 
-    for i = 1:nx
-        for j = 1:ny
-            data[i,j] = complex(f[i,j],0.0)
-        end
-    end
+    for j = 1:ny for i = 1:nx
+        data[i,j] = complex(f[i,j],0.0)
+    end end
 
     e = fft(data)
     e[1,1] = 0.0
-    for i = 1:nx
-        for j = 1:ny
-            data1[i,j] = e[i,j]/(aa + bb*cos(kx[i]) + cc*cos(ky[j]))
-        end
-    end
+    for j = 1:ny for i = 1:nx
+        data1[i,j] = e[i,j]/(aa + bb*cos(kx[i]) + cc*cos(ky[j]))
+    end end
 
     u = real(ifft(data1))
 
@@ -270,10 +273,6 @@ rms_error, max_error = Analysis.compute_error(par_, var_)
 # --------------------
 ## Output data
 # --------------------
-println("Error details:");
-println("L-2 Norm = ", rms_error);
-println("Maximum Norm = ", max_error);
-print("CPU Time = ", t);
 Output.out_data(rms_error,max_error,t)
 
 # --------------------
