@@ -1,8 +1,8 @@
-clearconsole()
+# clearconsole()
 
 using CPUTime
 using Printf
-using Plots
+# using Plots
 using FFTW
 
 function compute_l2norm(nx, ny, r)
