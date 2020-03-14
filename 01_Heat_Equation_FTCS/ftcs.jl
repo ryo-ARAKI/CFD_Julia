@@ -22,7 +22,8 @@ module ParamVar
     mutable struct Variables
         x::Array{Float64}  # Global coordinate
         uₑ::Array{Float64}  # Exact (analytical) solution at time=t
-        uₙ::Array{Float64, 2}  # Numerical solution
+        uₙ::Array{Float64}  # Numerical solution
+        uₙ₊₁::Array{Float64}  # Numerical solution at new time step
         error::Array{Float64}  # L2 norm error
     end
 end  # ParamVar
@@ -39,17 +40,19 @@ module HeatEq1D_FTCS
     function set_initial_condition(par,var)
         for ix = 1:par.nₓ+1
             var.x[ix] = par.xₗ + par.dx * (ix-1)
-            var.uₙ[1, ix] = -sin(pi*var.x[ix])
+            var.uₙ[ix] = -sin(pi*var.x[ix])
             var.uₑ[ix] = -exp(-par.t) * sin(pi*var.x[ix])
         end
+        var.uₙ[1] = 0.0
+        var.uₙ[par.nₓ+1] = 0.0
     end
 
     """
     Set boundary conditions at arbitrary time step
     """
-    function set_boundary_condition(par,var,it)
-        var.uₙ[it,1] = 0.0
-        var.uₙ[it,par.nₓ+1] = 0.0
+    function set_boundary_condition(par,var)
+        var.uₙ₊₁[1] = 0.0
+        var.uₙ₊₁[par.nₓ+1] = 0.0
     end
 
     """
@@ -58,11 +61,12 @@ module HeatEq1D_FTCS
     function time_march(par,var)
         for it = 2:par.nₜ+1  # Time integration
             for ix = 2:par.nₓ  # FTCS scheme
-                var.uₙ[it,ix] = var.uₙ[it-1,ix] + par.β * (
-                    var.uₙ[it-1,ix+1] - 2.0 * var.uₙ[it-1,ix] + var.uₙ[it-1,ix-1]
+                var.uₙ₊₁[ix] = var.uₙ[ix] + par.β * (
+                    var.uₙ[ix+1] - 2.0 * var.uₙ[ix] + var.uₙ[ix-1]
                 )
             end
-            set_boundary_condition(par,var,it)
+            set_boundary_condition(par,var)
+            var.uₙ = copy(var.uₙ₊₁)  # var.uₙ = var.uₙ₊₁ is reference copy so that it gives wrong answer
         end
     end
 end  # HeatEq1D_FTCS
@@ -76,7 +80,7 @@ module Analysis
     Compute error of final field
     """
     function calc_finalerror(par,var)
-        var.error = var.uₙ[par.nₜ+1,:] - var.uₑ
+        var.error = var.uₙ₊₁[:] - var.uₑ
     end
 
     """
@@ -120,7 +124,7 @@ using Printf
             write(out,
                 @sprintf("%.16f", var.x[ix]), " ",
                 @sprintf("%.16f", var.uₑ[ix]), " ",
-                @sprintf("%.16f", var.uₙ[par.nₜ+1, ix]), " ",
+                @sprintf("%.16f", var.uₙ₊₁[ix]), " ",
                 @sprintf("%.16f", var.error[ix]), " \n"
                 )
         end
@@ -166,17 +170,18 @@ param_ = ParamVar.Parameters(xₗ,xᵣ,dx,nₓ,dt,t,nₜ,α,β)
 ### Arrays
 x = Array{Float64}(undef, param_.nₓ+1)
 uₑ = Array{Float64}(undef, param_.nₓ+1)
-uₙ = Array{Float64}(undef, param_.nₜ+1, param_.nₓ+1)
+uₙ = Array{Float64}(undef, param_.nₓ+1)
+uₙ₊₁ = Array{Float64}(undef, param_.nₓ+1)
 error = Array{Float64}(undef, param_.nₓ+1)
 
 ### Declare variable module
-var_ = ParamVar.Variables(x,uₑ,uₙ,error)
+var_ = ParamVar.Variables(x,uₑ,uₙ,uₙ₊₁,error)
 
 # --------------------
 ## Compute coordinates, analytical final-state solution and initial condition
 # --------------------
 HeatEq1D_FTCS.set_initial_condition(param_, var_)
-HeatEq1D_FTCS.set_boundary_condition(param_, var_,1)
+HeatEq1D_FTCS.set_boundary_condition(param_, var_)
 
 # --------------------
 ## Compute Time iteration
