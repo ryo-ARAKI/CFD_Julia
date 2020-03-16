@@ -2,8 +2,8 @@
 using DelimitedFiles
 
 using CSV
-# using PyPlot
-using GR
+using PyPlot
+# using GR
 #using Plots
 #plotly()
 # font = plt.font("Times New Roman", 18)
@@ -12,7 +12,7 @@ using GR
 nx = 128
 ny = 128
 
-final_field = readdlm("field_final.txt")#, datarow = 3, type=Float64)
+final_field = readdlm("vm10.txt")#, datarow = 3, type=Float64)
 
 x = convert(Array,final_field[:,1])
 y = convert(Array,final_field[:,2])
