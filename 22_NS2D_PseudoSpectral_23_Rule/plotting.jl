@@ -2,8 +2,8 @@
 using DelimitedFiles
 
 using CSV
-using PyPlot
-#using GR
+# using PyPlot
+using GR
 #using Plots
 #plotly()
 # font = plt.font("Times New Roman", 18)

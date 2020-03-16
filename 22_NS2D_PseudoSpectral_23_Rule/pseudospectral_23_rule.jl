@@ -1,4 +1,4 @@
-clearconsole()
+# clearconsole()
 
 using CPUTime
 using Printf
