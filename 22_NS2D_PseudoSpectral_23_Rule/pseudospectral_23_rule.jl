@@ -190,33 +190,37 @@ using FFTW
     """
     function numerical(nx,ny,nt,dx,dy,dt,x,y,re,wn,ns,Output)
 
+        # Intermidiate vortex field for RK3 scheme
         w1f = Array{Complex{Float64}}(undef,nx,ny)
         w2f = Array{Complex{Float64}}(undef,nx,ny)
         wnf = Array{Complex{Float64}}(undef,nx,ny)
 
+        # Intermidiate Jacobian field for RK3 scheme
         j1f = Array{Complex{Float64}}(undef,nx,ny)
         j2f = Array{Complex{Float64}}(undef,nx,ny)
         jnf = Array{Complex{Float64}}(undef,nx,ny)
 
-        ut = Array{Float64}(undef, nx+1, ny+1)
-        data = Array{Complex{Float64}}(undef,nx,ny)
+        ut = Array{Float64}(undef, nx+1, ny+1)  # Output field
+        wm_cmp = Array{Complex{Float64}}(undef, nx, ny)
         d1 = Array{Float64}(undef, nx, ny)
         d2 = Array{Float64}(undef, nx, ny)
         d3 = Array{Float64}(undef, nx, ny)
 
         k2 = Array{Float64}(undef, nx, ny)
 
+        freq_out = Int64(nt/ns)  # Output frequency
         m = 1 # record index
-        freq = Int64(nt/ns)
 
         for i = 1:nx for j = 1:ny
-            data[i,j] = complex(wn[i+1,j+1],0.0)
+            wm_cmp[i,j] = complex(wn[i+1,j+1],0.0)
         end end
+        # wm_cmp[1,1] = undef, but it will be overlapped by wnf[1,1] = 0.0
 
-        wnf = fft(data)
+        wnf = fft(wm_cmp)
         k2 = wavespace(nx,ny,dx,dy)
         wnf[1,1] = 0.0
 
+        # Constants for RK3 scheme
         alpha1, alpha2, alpha3 = 8.0/15.0, 2.0/15.0, 1.0/3.0
         gamma1, gamma2, gamma3 = 8.0/15.0, 5.0/12.0, 3.0/4.0
         rho2, rho3 = -17.0/60.0, -5.0/12.0
@@ -228,7 +232,8 @@ using FFTW
             d3[i,j] = alpha3*z
         end end
 
-        for k = 1:nt
+        # Time iteration
+        for itr_step = 1:nt
             jnf = jacobian(nx,ny,dx,dy,wnf,k2)
 
             # 1st step
@@ -255,8 +260,8 @@ using FFTW
                             (rho3*dt*j1f[i,j] + gamma3*dt*j2f[i,j])/(1.0 + d3[i,j])
             end end
 
-            if (mod(k,freq) == 0)
-                println(k)
+            if (mod(itr_step,freq_out) == 0)
+                println(itr_step)
                 ut[1:nx,1:ny] = real(ifft(wnf))
                 # periodic BC
                 ut[nx+1,:] = ut[1,:]
@@ -270,7 +275,7 @@ using FFTW
             end
         end
 
-        return ut
+        # return ut
     end
 end  # NS_2D_PseudoSpectral_23Rule
 
@@ -359,13 +364,13 @@ var_ = ParamVar.Variables(
 # ----------------------------------------
 ## Define coordinates
 # ----------------------------------------
-NS_2D_PseudoSpectral_23Rule.set_coordinates(par_, var_.x, var_.y)
+set_coordinates(par_, var_.x, var_.y)
 
 
 # ----------------------------------------
 ## Set initial condition for vortex
 # ----------------------------------------
-NS_2D_PseudoSpectral_23Rule.compute_vortex_initial_condition(
+compute_vortex_initial_condition(
     par_.nx, par_.ny,
     var_.x, var_.y,
     var_.wn)
@@ -374,7 +379,7 @@ NS_2D_PseudoSpectral_23Rule.compute_vortex_initial_condition(
 # ----------------------------------------
 ## Ensure periodic boundary condition
 # ----------------------------------------
-NS_2D_PseudoSpectral_23Rule.compute_periodic_solution(
+compute_periodic_solution(
     par_.nx, par_.ny,
     var_.wn)
 
