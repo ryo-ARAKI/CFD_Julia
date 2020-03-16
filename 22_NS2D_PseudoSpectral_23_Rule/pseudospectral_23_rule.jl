@@ -122,62 +122,56 @@ using FFTW
     jf = -J(w,ψ)
     """
     function jacobian(nx,ny,dx,dy,wf,k2)
-        eps = 1.0e-6
-        kx = Array{Float64}(undef,nx)
-        ky = Array{Float64}(undef,ny)
+        ϵ = 1.0e-6
 
-        #wave number indexing
-        hx = 2.0*pi/(nx*dx)
+        kx = Array{Float64}(undef, nx)
+        ky = Array{Float64}(undef, ny)
 
+        # Wave number indexing
+        hx = 2.0*pi / (nx*dx)
         for ix = 1:Int64(nx/2)
-            kx[ix] = hx*(ix-1.0)
-            kx[ix+Int64(nx/2)] = hx*(ix-Int64(nx/2)-1)
+            kx[ix] = hx * (ix-1.0)
+            kx[ix+Int64(nx/2)] = hx * (ix-Int64(nx/2)-1)
         end
-        kx[1] = eps
+        kx[1] = ϵ
         ky = transpose(kx)
 
-        j1f = zeros(ComplexF64,nx,ny)
-        j2f = zeros(ComplexF64,nx,ny)
-        j3f = zeros(ComplexF64,nx,ny)
-        j4f = zeros(ComplexF64,nx,ny)
+        j1f = zeros(ComplexF64, nx, ny)
+        j2f = zeros(ComplexF64, nx, ny)
+        j3f = zeros(ComplexF64, nx, ny)
+        j4f = zeros(ComplexF64, nx, ny)
 
-        # x-derivative
+        # Compute x derivative
         for ix = 1:nx for iy = 1:ny
-            j1f[ix,iy] = 1.0im*wf[ix,iy]*kx[ix]/k2[ix,iy]
-            j4f[ix,iy] = 1.0im*wf[ix,iy]*kx[ix]
+            j1f[ix, iy] = 1.0im * wf[ix, iy] * kx[ix] / k2[ix, iy]
+            j4f[ix, iy] = 1.0im * wf[ix, iy] * kx[ix]
         end end
 
-        # y-derivative
+        # Compute y derivative
         for ix = 1:nx for iy = 1:ny
-            j2f[ix,iy] = 1.0im*wf[ix,iy]*ky[iy]
-            j3f[ix,iy] = 1.0im*wf[ix,iy]*ky[iy]/k2[ix,iy]
+            j2f[ix, iy] = 1.0im * wf[ix, iy] * ky[iy]
+            j3f[ix, iy] = 1.0im * wf[ix, iy] * ky[iy] / k2[ix, iy]
         end end
 
         nxe = Int64(floor(nx*2/3))
         nye = Int64(floor(ny*2/3))
 
+        # Zero padding with 2/3 rule
         for ix = Int64(floor(nxe/2)+1):Int64(nx-floor(nxe/2)) for iy = 1:ny
-            j1f[ix,iy] = 0.0
-            j2f[ix,iy] = 0.0
-            j3f[ix,iy] = 0.0
-            j4f[ix,iy] = 0.0
+            j1f[ix, iy], j2f[ix, iy], j3f[ix, iy], j4f[ix, iy] = 0.0, 0.0, 0.0, 0.0
         end end
-
         for ix = 1:nx for iy = Int64(floor(nye/2)+1):Int64(ny-floor(nye/2))
-            j1f[ix,iy] = 0.0
-            j2f[ix,iy] = 0.0
-            j3f[ix,iy] = 0.0
-            j4f[ix,iy] = 0.0
+            j1f[ix, iy], j2f[ix, iy], j3f[ix, iy], j4f[ix, iy] = 0.0, 0.0, 0.0, 0.0
         end end
 
         j1 = real(ifft(j1f))
         j2 = real(ifft(j2f))
         j3 = real(ifft(j3f))
         j4 = real(ifft(j4f))
-        jacp = zeros(Float64,nx,ny)
 
+        jacp = zeros(Float64, nx, ny)
         for ix = 1:nx for iy = 1:ny
-            jacp[ix,iy] = j1[ix,iy]*j2[ix,iy] - j3[ix,iy]*j4[ix,iy]
+            jacp[ix, iy] = j1[ix, iy] * j2[ix, iy] - j3[ix, iy] * j4[ix, iy]
         end end
 
         jf = fft(jacp)
@@ -191,84 +185,84 @@ using FFTW
         - Time integration using Runge-Kutta third order
         - 2nd-order finite difference discretization
     """
-    function numerical(nx,ny,nt,dx,dy,dt,x,y,re,wn,ns,Output)
+    function numerical(nx,ny,nt,dx,dy,dt,x,y,Re,wn,ns,Output)
 
-        # Intermidiate vortex field for RK3 scheme
-        w1f = Array{Complex{Float64}}(undef,nx,ny)
-        w2f = Array{Complex{Float64}}(undef,nx,ny)
-        wnf = Array{Complex{Float64}}(undef,nx,ny)
+        # Intermidiate vortecity field for RK3 scheme
+        w1f = Array{Complex{Float64}}(undef, nx, ny)
+        w2f = Array{Complex{Float64}}(undef, nx, ny)
+        wnf = Array{Complex{Float64}}(undef, nx, ny)
 
         # Intermidiate Jacobian field for RK3 scheme
-        j1f = Array{Complex{Float64}}(undef,nx,ny)
-        j2f = Array{Complex{Float64}}(undef,nx,ny)
-        jnf = Array{Complex{Float64}}(undef,nx,ny)
+        j1f = Array{Complex{Float64}}(undef, nx, ny)
+        j2f = Array{Complex{Float64}}(undef, nx, ny)
+        jnf = Array{Complex{Float64}}(undef, nx, ny)
 
-        ut = Array{Float64}(undef, nx+1, ny+1)  # Output field
         wm_cmp = Array{Complex{Float64}}(undef, nx, ny)
         d1 = Array{Float64}(undef, nx, ny)
         d2 = Array{Float64}(undef, nx, ny)
         d3 = Array{Float64}(undef, nx, ny)
-
         k2 = Array{Float64}(undef, nx, ny)
 
-        freq_out = Int64(nt/ns)  # Output frequency
-        m = 1 # record index
+        freq_out = Int64(nt/ns)
+        m = 1
 
         for ix = 1:nx for iy = 1:ny
-            wm_cmp[ix,iy] = complex(wn[ix+1,iy+1],0.0)
+            wm_cmp[ix, iy] = complex(wn[ix+1, iy+1], 0.0)
         end end
-        # wm_cmp[1,1] = undef, but it will be overlapped by wnf[1,1] = 0.0
-
         wnf = fft(wm_cmp)
+        wnf[1, 1] = 0.0
         k2 = wavespace(nx,ny,dx,dy)
-        wnf[1,1] = 0.0
 
         # Constants for RK3 scheme
-        alpha1, alpha2, alpha3 = 8.0/15.0, 2.0/15.0, 1.0/3.0
-        gamma1, gamma2, gamma3 = 8.0/15.0, 5.0/12.0, 3.0/4.0
-        rho2, rho3 = -17.0/60.0, -5.0/12.0
+        α1, α2, α3 = 8.0/15.0, 2.0/15.0, 1.0/3.0
+        γ1, γ2, γ3 = 8.0/15.0, 5.0/12.0, 3.0/4.0
+        ρ2, ρ3 = -17.0/60.0, -5.0/12.0
 
         for ix = 1:nx for iy = 1:ny
-            z = 0.5*dt*k2[ix,iy]/re
-            d1[ix,iy] = alpha1*z
-            d2[ix,iy] = alpha2*z
-            d3[ix,iy] = alpha3*z
+            z = 0.5 * dt * k2[ix, iy] / Re
+            d1[ix, iy] = α1 * z
+            d2[ix, iy] = α2 * z
+            d3[ix, iy] = α3 * z
         end end
 
         # Time iteration
-        for itr_step = 1:nt
-            jnf = jacobian(nx,ny,dx,dy,wnf,k2)
+        for itr_time = 1:nt
+
+            jnf = jacobian(nx, ny, dx, dy, wnf, k2)
 
             # 1st step
             for ix = 1:nx for iy = 1:ny
-                w1f[ix,iy] = ((1.0 - d1[ix,iy])/(1.0 + d1[ix,iy]))*wnf[ix,iy] +
-                            (gamma1*dt*jnf[ix,iy])/(1.0 + d1[ix,iy])
+                w1f[ix, iy] = ((1.0-d1[ix, iy]) / (1.0+d1[ix, iy])) * wnf[ix, iy] +
+                    (γ1*dt*jnf[ix, iy]) / (1.0+d1[ix, iy])
             end end
 
-            w1f[1,1] = 0.0
-            j1f = jacobian(nx,ny,dx,dy,w1f,k2)
+            w1f[1, 1] = 0.0
+            j1f = jacobian(nx, ny, dx, dy, w1f, k2)
 
             # 2nd step
             for ix = 1:nx for iy = 1:ny
-                w2f[ix,iy] = ((1.0 - d2[ix,iy])/(1.0 + d2[ix,iy]))*w1f[ix,iy] +
-                            (rho2*dt*jnf[ix,iy] + gamma2*dt*j1f[ix,iy])/(1.0 + d2[ix,iy])
+                w2f[ix, iy] = ((1.0-d2[ix, iy]) / (1.0+d2[ix, iy])) * w1f[ix, iy] +
+                    (ρ2*dt*jnf[ix, iy] + γ2*dt*j1f[ix, iy]) / (1.0+d2[ix, iy])
             end end
 
-            w2f[1,1] = 0.0
-            j2f = jacobian(nx,ny,dx,dy,w2f,k2)
+            w2f[1, 1] = 0.0
+            j2f = jacobian(nx, ny, dx, dy, w2f, k2)
 
-            # 3rd step
+            # 3rdd step
             for ix = 1:nx for iy = 1:ny
-                wnf[ix,iy] = ((1.0 - d3[ix,iy])/(1.0 + d3[ix,iy]))*w2f[ix,iy] +
-                            (rho3*dt*j1f[ix,iy] + gamma3*dt*j2f[ix,iy])/(1.0 + d3[ix,iy])
+                wnf[ix, iy] = ((1.0-d3[ix, iy]) / (1.0+d3[ix, iy])) * w2f[ix, iy] +
+                    (ρ3*dt*j1f[ix, iy] + γ3*dt*j2f[ix, iy]) / (1.0+d3[ix, iy])
             end end
 
-            if (mod(itr_step,freq_out) == 0)
-                println(itr_step)
-                ut[1:nx,1:ny] = real(ifft(wnf))
-                # periodic BC
-                ut[nx+1,:] = ut[1,:]
-                ut[:,ny+1] = ut[:,1]
+            # Output
+            if (mod(itr_time, freq_out) == 0)
+                println(itr_time)
+                ut = Array{Float64}(undef, nx+1, ny+1) # Output field
+                ut[1:nx, 1:ny] = real(ifft(wnf))
+
+                # Ensure periodic b.c.
+                ut[nx+1, :] = ut[1, :]
+                ut[:, ny+1] = ut[:, 1]
                 Output.out_field(
                     nx, ny,
                     x, y,
