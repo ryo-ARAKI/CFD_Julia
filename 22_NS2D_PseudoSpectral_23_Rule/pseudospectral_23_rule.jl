@@ -86,35 +86,34 @@ using FFTW
 
 
     """
-    TBA
+    Compute spherical wavenumber index
     """
     function wavespace(nx,ny,dx,dy)
-        eps = 1.0e-6
+        ϵ = 1.0e-6
 
-        kx = Array{Float64}(undef,nx)
-        ky = Array{Float64}(undef,ny)
+        kx = Array{Float64}(undef, nx)
+        ky = Array{Float64}(undef, ny)
+        k² = Array{Float64}(undef, nx, ny)
 
-        k2 = Array{Float64}(undef,nx,ny)
-
-        #wave number indexing
-        hx = 2.0*pi/(nx*dx)
-        hy = 2.0*pi/(ny*dy)
+        # Wave number indexing
+        hx = 2.0*pi / (nx*dx)
+        hy = 2.0*pi / (ny*dy)
 
         for ix = 1:Int64(nx/2)
-            kx[ix] = hx*(ix-1.0)
-            kx[ix+Int64(nx/2)] = hx*(ix-Int64(nx/2)-1)
+            kx[ix] = hx * (ix-1.0)
+            kx[ix+Int64(nx/2)] = hx * (ix-Int64(nx/2)-1)
         end
         for iy = 1:Int64(ny/2)
-            ky[iy] = hy*(iy-1.0)
-            ky[iy+Int64(ny/2)] = hy*(iy-Int64(ny/2)-1)
+            ky[iy] = hy * (iy-1.0)
+            ky[iy+Int64(ny/2)] = hy * (iy-Int64(ny/2)-1)
         end
-        kx[1], ky[1] = eps, eps
+        kx[1], ky[1] = ϵ, ϵ
 
         for ix = 1:nx for iy = 1:ny
-            k2[ix,iy] = kx[ix]^2 + ky[iy]^2
+            k²[ix, iy] = kx[ix]^2 + ky[iy]^2
         end end
 
-        return k2
+        return k²
     end
 
 
