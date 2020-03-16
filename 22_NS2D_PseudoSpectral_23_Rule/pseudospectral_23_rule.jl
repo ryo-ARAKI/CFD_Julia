@@ -67,9 +67,9 @@ using FFTW
         xc2 = pi+pi/4.0
         yc2 = pi
 
-        for i = 2:nx+2 for j = 2:ny+2
-            w[i,j] = exp(-sigma*((x[i-1]-xc1)^2 + (y[j-1]-yc1)^2)) +
-                    exp(-sigma*((x[i-1]-xc2)^2 + (y[j-1]-yc2)^2))
+        for ix = 2:nx+2 for iy = 2:ny+2
+            w[ix,iy] = exp(-sigma*((x[ix-1]-xc1)^2 + (y[iy-1]-yc1)^2)) +
+                    exp(-sigma*((x[ix-1]-xc2)^2 + (y[iy-1]-yc2)^2))
         end end
     end
 
@@ -98,16 +98,20 @@ using FFTW
 
         #wave number indexing
         hx = 2.0*pi/(nx*dx)
+        hy = 2.0*pi/(ny*dy)
 
-        for i = 1:Int64(nx/2)
-            kx[i] = hx*(i-1.0)
-            kx[i+Int64(nx/2)] = hx*(i-Int64(nx/2)-1)
+        for ix = 1:Int64(nx/2)
+            kx[ix] = hx*(ix-1.0)
+            kx[ix+Int64(nx/2)] = hx*(ix-Int64(nx/2)-1)
         end
-        kx[1] = eps
-        ky = kx
+        for iy = 1:Int64(ny/2)
+            ky[iy] = hy*(iy-1.0)
+            ky[iy+Int64(ny/2)] = hy*(iy-Int64(ny/2)-1)
+        end
+        kx[1], ky[1] = eps, eps
 
-        for i = 1:nx for j = 1:ny
-            k2[i,j] = kx[i]^2 + ky[j]^2
+        for ix = 1:nx for iy = 1:ny
+            k2[ix,iy] = kx[ix]^2 + ky[iy]^2
         end end
 
         return k2
@@ -126,9 +130,9 @@ using FFTW
         #wave number indexing
         hx = 2.0*pi/(nx*dx)
 
-        for i = 1:Int64(nx/2)
-            kx[i] = hx*(i-1.0)
-            kx[i+Int64(nx/2)] = hx*(i-Int64(nx/2)-1)
+        for ix = 1:Int64(nx/2)
+            kx[ix] = hx*(ix-1.0)
+            kx[ix+Int64(nx/2)] = hx*(ix-Int64(nx/2)-1)
         end
         kx[1] = eps
         ky = transpose(kx)
@@ -139,32 +143,32 @@ using FFTW
         j4f = zeros(ComplexF64,nx,ny)
 
         # x-derivative
-        for i = 1:nx for j = 1:ny
-            j1f[i,j] = 1.0im*wf[i,j]*kx[i]/k2[i,j]
-            j4f[i,j] = 1.0im*wf[i,j]*kx[i]
+        for ix = 1:nx for iy = 1:ny
+            j1f[ix,iy] = 1.0im*wf[ix,iy]*kx[ix]/k2[ix,iy]
+            j4f[ix,iy] = 1.0im*wf[ix,iy]*kx[ix]
         end end
 
         # y-derivative
-        for i = 1:nx for j = 1:ny
-            j2f[i,j] = 1.0im*wf[i,j]*ky[j]
-            j3f[i,j] = 1.0im*wf[i,j]*ky[j]/k2[i,j]
+        for ix = 1:nx for iy = 1:ny
+            j2f[ix,iy] = 1.0im*wf[ix,iy]*ky[iy]
+            j3f[ix,iy] = 1.0im*wf[ix,iy]*ky[iy]/k2[ix,iy]
         end end
 
         nxe = Int64(floor(nx*2/3))
         nye = Int64(floor(ny*2/3))
 
-        for i = Int64(floor(nxe/2)+1):Int64(nx-floor(nxe/2)) for j = 1:ny
-            j1f[i,j] = 0.0
-            j2f[i,j] = 0.0
-            j3f[i,j] = 0.0
-            j4f[i,j] = 0.0
+        for ix = Int64(floor(nxe/2)+1):Int64(nx-floor(nxe/2)) for iy = 1:ny
+            j1f[ix,iy] = 0.0
+            j2f[ix,iy] = 0.0
+            j3f[ix,iy] = 0.0
+            j4f[ix,iy] = 0.0
         end end
 
-        for i = 1:nx for j = Int64(floor(nye/2)+1):Int64(ny-floor(nye/2))
-            j1f[i,j] = 0.0
-            j2f[i,j] = 0.0
-            j3f[i,j] = 0.0
-            j4f[i,j] = 0.0
+        for ix = 1:nx for iy = Int64(floor(nye/2)+1):Int64(ny-floor(nye/2))
+            j1f[ix,iy] = 0.0
+            j2f[ix,iy] = 0.0
+            j3f[ix,iy] = 0.0
+            j4f[ix,iy] = 0.0
         end end
 
         j1 = real(ifft(j1f))
@@ -173,8 +177,8 @@ using FFTW
         j4 = real(ifft(j4f))
         jacp = zeros(Float64,nx,ny)
 
-        for i = 1:nx for j = 1:ny
-            jacp[i,j] = j1[i,j]*j2[i,j] - j3[i,j]*j4[i,j]
+        for ix = 1:nx for iy = 1:ny
+            jacp[ix,iy] = j1[ix,iy]*j2[ix,iy] - j3[ix,iy]*j4[ix,iy]
         end end
 
         jf = fft(jacp)
@@ -211,8 +215,8 @@ using FFTW
         freq_out = Int64(nt/ns)  # Output frequency
         m = 1 # record index
 
-        for i = 1:nx for j = 1:ny
-            wm_cmp[i,j] = complex(wn[i+1,j+1],0.0)
+        for ix = 1:nx for iy = 1:ny
+            wm_cmp[ix,iy] = complex(wn[ix+1,iy+1],0.0)
         end end
         # wm_cmp[1,1] = undef, but it will be overlapped by wnf[1,1] = 0.0
 
@@ -225,11 +229,11 @@ using FFTW
         gamma1, gamma2, gamma3 = 8.0/15.0, 5.0/12.0, 3.0/4.0
         rho2, rho3 = -17.0/60.0, -5.0/12.0
 
-        for i = 1:nx for j = 1:ny
-            z = 0.5*dt*k2[i,j]/re
-            d1[i,j] = alpha1*z
-            d2[i,j] = alpha2*z
-            d3[i,j] = alpha3*z
+        for ix = 1:nx for iy = 1:ny
+            z = 0.5*dt*k2[ix,iy]/re
+            d1[ix,iy] = alpha1*z
+            d2[ix,iy] = alpha2*z
+            d3[ix,iy] = alpha3*z
         end end
 
         # Time iteration
@@ -237,27 +241,27 @@ using FFTW
             jnf = jacobian(nx,ny,dx,dy,wnf,k2)
 
             # 1st step
-            for i = 1:nx for j = 1:ny
-                w1f[i,j] = ((1.0 - d1[i,j])/(1.0 + d1[i,j]))*wnf[i,j] +
-                            (gamma1*dt*jnf[i,j])/(1.0 + d1[i,j])
+            for ix = 1:nx for iy = 1:ny
+                w1f[ix,iy] = ((1.0 - d1[ix,iy])/(1.0 + d1[ix,iy]))*wnf[ix,iy] +
+                            (gamma1*dt*jnf[ix,iy])/(1.0 + d1[ix,iy])
             end end
 
             w1f[1,1] = 0.0
             j1f = jacobian(nx,ny,dx,dy,w1f,k2)
 
             # 2nd step
-            for i = 1:nx for j = 1:ny
-                w2f[i,j] = ((1.0 - d2[i,j])/(1.0 + d2[i,j]))*w1f[i,j] +
-                            (rho2*dt*jnf[i,j] + gamma2*dt*j1f[i,j])/(1.0 + d2[i,j])
+            for ix = 1:nx for iy = 1:ny
+                w2f[ix,iy] = ((1.0 - d2[ix,iy])/(1.0 + d2[ix,iy]))*w1f[ix,iy] +
+                            (rho2*dt*jnf[ix,iy] + gamma2*dt*j1f[ix,iy])/(1.0 + d2[ix,iy])
             end end
 
             w2f[1,1] = 0.0
             j2f = jacobian(nx,ny,dx,dy,w2f,k2)
 
             # 3rd step
-            for i = 1:nx for j = 1:ny
-                wnf[i,j] = ((1.0 - d3[i,j])/(1.0 + d3[i,j]))*w2f[i,j] +
-                            (rho3*dt*j1f[i,j] + gamma3*dt*j2f[i,j])/(1.0 + d3[i,j])
+            for ix = 1:nx for iy = 1:ny
+                wnf[ix,iy] = ((1.0 - d3[ix,iy])/(1.0 + d3[ix,iy]))*w2f[ix,iy] +
+                            (rho3*dt*j1f[ix,iy] + gamma3*dt*j2f[ix,iy])/(1.0 + d3[ix,iy])
             end end
 
             if (mod(itr_step,freq_out) == 0)
@@ -290,8 +294,8 @@ using Printf
     """
     function out_field(nx, ny, x, y, val, filename)
         out_field = open(filename, "w")
-            for j = 1:ny+1 for i = 1:nx+1
-                write(out_field, string(x[i]), " ",string(y[j]), " ", string(val[i,j]), " \n")
+            for iy = 1:ny+1 for ix = 1:nx+1
+                write(out_field, string(x[ix]), " ",string(y[iy]), " ", string(val[ix,iy]), " \n")
             end end
         close(out_field)
     end
